@@ -1,8 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
-import { Link } from 'react-router-dom'
-import { extractSuppliers, getSuppliers } from '../api/suppliers'
+import { Link, Outlet } from 'react-router-dom'
+import { createSupplier, extractSuppliers, getSuppliers, type SupplierCreateData } from '../api/suppliers'
+
+export type SupplierFormMutationContext = {
+  mutate: (data: SupplierCreateData, onSuccess?: () => void) => void
+  isPending: boolean
+  error: Error | null
+  isSuccess: boolean
+  reset: () => void
+}
 
 function getColumnType(values: unknown[]): GridColDef['type'] {
   const definedValues = values.filter((value) => value !== null && value !== undefined)
@@ -25,7 +33,7 @@ function displayValue(value: unknown): string | number | boolean | null {
   return JSON.stringify(value)
 }
 
-function SuppliersPage() {
+function SupplierListPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['suppliers'],
     queryFn: getSuppliers,
@@ -95,4 +103,29 @@ function SuppliersPage() {
   )
 }
 
+function SuppliersPage() {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: createSupplier,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+    },
+  })
+
+  function mutateSupplier(data: SupplierCreateData, onSuccess?: () => void) {
+    mutation.mutate(data, { onSuccess })
+  }
+
+  const context: SupplierFormMutationContext = {
+    mutate: mutateSupplier,
+    isPending: mutation.isPending,
+    error: mutation.error,
+    isSuccess: mutation.isSuccess,
+    reset: mutation.reset,
+  }
+
+  return <Outlet context={context} />
+}
+
+export { SupplierListPage }
 export default SuppliersPage

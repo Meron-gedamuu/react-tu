@@ -20,24 +20,6 @@ type ItemsGridProps = {
   ariaLabel: string
 }
 
-function displayValue(value: unknown): string | number | boolean | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value
-  }
-  return JSON.stringify(value)
-}
-
-const emptyResultFields = [
-  'ArticleCode',
-  'ArticleName',
-  'GslType',
-  'PreferenceCode',
-  'PreferenceDesc',
-  'PrefParentCode',
-  'PrefParentDesc',
-]
-
 function NoItemsOverlay() {
   return (
     <Box sx={{ display: 'grid', height: '100%', placeItems: 'center' }}>

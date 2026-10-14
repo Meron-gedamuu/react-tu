@@ -1,29 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Box, CircularProgress, Typography } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
-import { getServices } from '../api/services'
-
-type ServiceRecord = Record<string, unknown>
-
-function isRecord(value: unknown): value is ServiceRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function extractServices(payload: unknown): ServiceRecord[] {
-  if (Array.isArray(payload)) return payload.filter(isRecord)
-  if (!isRecord(payload)) return []
-
-  for (const key of ['data', 'items', 'services', 'results', 'result']) {
-    const nested = payload[key]
-    if (Array.isArray(nested)) return nested.filter(isRecord)
-    if (isRecord(nested)) {
-      const nestedServices = extractServices(nested)
-      if (nestedServices.length > 0) return nestedServices
-    }
-  }
-
-  return []
-}
+import { extractServices, getServices } from '../api/services'
 
 function displayValue(value: unknown): string | number | boolean | null {
   if (value === null || value === undefined) return null

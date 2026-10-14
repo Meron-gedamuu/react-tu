@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Autocomplete,
@@ -17,14 +17,17 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useOutletContext } from 'react-router-dom'
 import { getUnitOfMeasurementLookup, getUnitOfMeasurementOptions } from '../api/items'
-import { getSupplierFormInfo } from '../api/suppliers'
+import { getSupplierFormInfo, type SupplierCreateData } from '../api/suppliers'
+import type { SupplierFormMutationContext } from './SuppliersPage'
 
 type SelectOption = {
   code: string
   description: string
 }
+
+type SupplierFormErrors = Partial<Record<'tradeName' | 'tin' | 'state' | 'tax' | 'supplierCode', string>>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -53,18 +56,16 @@ function getOptions(payload: unknown): SelectOption[] {
 }
 
 function NewSupplierPage() {
+  const { mutate, isPending, error: createError, isSuccess, reset } = useOutletContext<SupplierFormMutationContext>()
+  const navigate = useNavigate()
   const { data: formInfo, isLoading: isLoadingFormInfo, error: formInfoError } = useQuery({
     queryKey: ['supplier-form-info'],
     queryFn: getSupplierFormInfo,
   })
-  const { data: uomPayload, isLoading: isLoadingUoms, error: uomError } = useQuery({
-    queryKey: ['unit-of-measurement'],
-    queryFn: getUnitOfMeasurementLookup,
-  })
+  
   const formInfoRecord = isRecord(formInfo) ? formInfo : {}
   const stateOptions = getOptions(formInfoRecord.object_state_dfn_by_type)
   const taxOptions = getOptions(formInfoRecord.tax_by_catagory ?? formInfoRecord.tax_by_category)
-  const uomOptions = getUnitOfMeasurementOptions(uomPayload)
   const supplierCodeValue = formInfoRecord.new_organization_code
   const supplierCode = typeof supplierCodeValue === 'string' || typeof supplierCodeValue === 'number'
     ? String(supplierCodeValue)
@@ -74,16 +75,72 @@ function NewSupplierPage() {
   const [tin, setTin] = useState('')
   const [stateCode, setStateCode] = useState('')
   const [taxCode, setTaxCode] = useState('')
-  const [uomCode, setUomCode] = useState('')
   const [remark, setRemark] = useState('')
   const [tab, setTab] = useState('other')
-  const [saveUnavailable, setSaveUnavailable] = useState(false)
+  const [formErrors, setFormErrors] = useState<SupplierFormErrors>({})
   const selectedStateCode = stateCode || stateOptions.find((option) => option.description === 'Active')?.code || ''
   const selectedTaxCode = taxCode || taxOptions.find((option) => option.description === 'Not Taxable')?.code || ''
 
+  useEffect(() => {
+    if (!isSuccess) return
+
+    setIsActive(true)
+    setTradeName('')
+    setTin('')
+    setStateCode('')
+    setTaxCode('')
+    setRemark('')
+    setTab('other')
+    setFormErrors({})
+    reset()
+    navigate('/suppliers', { replace: true })
+  }, [isSuccess, navigate, reset])
+
+  function clearFormError(field: keyof SupplierFormErrors) {
+    setFormErrors((current) => {
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setSaveUnavailable(true)
+
+    const errors: SupplierFormErrors = {}
+    if (!supplierCode.trim()) errors.supplierCode = 'Supplier Code is not available.'
+    if (!tradeName.trim()) errors.tradeName = 'Trade Name is required.'
+    if (!tin.trim()) errors.tin = 'TIN Number is required.'
+    if (!selectedStateCode || !stateOptions.some((option) => option.code === selectedStateCode)) {
+      errors.state = 'Select a valid State.'
+    }
+    if (!selectedTaxCode || !taxOptions.some((option) => option.code === selectedTaxCode)) {
+      errors.tax = 'Select a valid Tax.'
+    }
+
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    const payload: SupplierCreateData = {
+      type: 7,
+      tradeName: tradeName.trim(),
+      brandName: tradeName.trim(),
+      businessType: 'LKUP000000121',
+      preference: 'PREFE000001057',
+      isActive,
+      remark: remark.trim(),
+      organizationUnit: 'OUD100007979',
+      tax: selectedTaxCode,
+      orgUnitDef: 'OUD100007979',
+      activitiyDefinition: 'AD-000000009',
+      objectStateDefinition: [selectedStateCode],
+      user: 'User000000037',
+      identification: { idNumber: tin.trim() },
+      address: [],
+      relation: [],
+    }
+
+    mutate(payload)
   }
 
   return (
@@ -104,28 +161,52 @@ function NewSupplierPage() {
             size="small"
           />
           <FormControlLabel
-            control={<Checkbox checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />}
+            control={<Checkbox
+              checked={isActive}
+              onChange={(event) => {
+                setIsActive(event.target.checked)
+                reset()
+              }}
+            />}
             label="Active"
           />
           <TextField
             label="Trade Name"
             value={tradeName}
-            onChange={(event) => setTradeName(event.target.value)}
+            onChange={(event) => {
+              setTradeName(event.target.value)
+              reset()
+              clearFormError('tradeName')
+            }}
             size="small"
+            required
+            error={Boolean(formErrors.tradeName)}
+            helperText={formErrors.tradeName}
           />
           <TextField
             label="Tin Number"
             value={tin}
-            onChange={(event) => setTin(event.target.value)}
+            onChange={(event) => {
+              setTin(event.target.value)
+              reset()
+              clearFormError('tin')
+            }}
             size="small"
+            required
+            error={Boolean(formErrors.tin)}
+            helperText={formErrors.tin}
           />
-          <FormControl size="small">
+          <FormControl size="small" error={Boolean(formErrors.state)} required>
             <InputLabel id="supplier-state-label">State</InputLabel>
             <Select
               labelId="supplier-state-label"
               label="State"
               value={selectedStateCode}
-              onChange={(event) => setStateCode(event.target.value)}
+              onChange={(event) => {
+                setStateCode(event.target.value)
+                reset()
+                clearFormError('state')
+              }}
               disabled={isLoadingFormInfo || stateOptions.length === 0}
             >
               {stateOptions.map((option) => (
@@ -150,35 +231,27 @@ function NewSupplierPage() {
                   labelId="supplier-tax-label"
                   label="Tax"
                   value={selectedTaxCode}
-                  onChange={(event) => setTaxCode(event.target.value)}
+                  onChange={(event) => {
+                    setTaxCode(event.target.value)
+                    reset()
+                    clearFormError('tax')
+                  }}
                   disabled={isLoadingFormInfo || taxOptions.length === 0}
+                  error={Boolean(formErrors.tax)}
                 >
                   {taxOptions.map((option) => (
                     <MenuItem key={option.code} value={option.code}>{option.description}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
-              <Autocomplete
-                options={uomOptions}
-                value={uomOptions.find((option) => option.code === uomCode) ?? null}
-                getOptionLabel={(option) => option.description}
-                isOptionEqualToValue={(option, value) => option.code === value.code}
-                onChange={(_, option) => setUomCode(option?.code ?? '')}
-                loading={isLoadingUoms}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="UOM"
-                    size="small"
-                    error={Boolean(uomError)}
-                    helperText={uomError ? 'Unable to load UOM options' : undefined}
-                  />
-                )}
-              />
+            
               <TextField
                 label="Remark (for internal use)"
                 value={remark}
-                onChange={(event) => setRemark(event.target.value)}
+                onChange={(event) => {
+                  setRemark(event.target.value)
+                  reset()
+                }}
                 size="small"
                 multiline
                 minRows={2}
@@ -190,11 +263,24 @@ function NewSupplierPage() {
         </Box>
 
         {formInfoError && <Alert severity="error">Unable to load supplier form options: {formInfoError.message}</Alert>}
-        {saveUnavailable && <Alert severity="warning">Supplier save endpoint is not configured.</Alert>}
+        {Object.values(formErrors).map((message) => (
+          <Alert severity="error" key={message}>{message}</Alert>
+        ))}
+        {createError && <Alert severity="error">Unable to create supplier: {createError.message}</Alert>}
+        {isSuccess && <Alert severity="success">Supplier created successfully.</Alert>}
+        {!formInfoError && !supplierCode && !isLoadingFormInfo && (
+          <Alert severity="warning">Supplier Code is unavailable; supplier details cannot be submitted.</Alert>
+        )}
 
         <footer className="supplier-form-footer">
           <Button component={Link} to="/suppliers" variant="outlined">Cancel</Button>
-          <Button type="submit" variant="contained">Save</Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isLoadingFormInfo || Boolean(formInfoError) || isPending}
+          >
+            {isPending ? 'Saving...' : 'Save'}
+          </Button>
         </footer>
       </form>
     </main>

@@ -2,6 +2,24 @@ import axios from 'axios'
 import API_BASE_URL from './baseUrl'
 
 export type SupplierRecord = Record<string, unknown>
+export type SupplierCreateData = {
+  type: 7
+  tradeName: string
+  brandName: string
+  businessType: 'LKUP000000121'
+  preference: 'PREFE000001057'
+  isActive: boolean
+  remark: string
+  organizationUnit: 'OUD100007979'
+  tax: string
+  orgUnitDef: 'OUD100007979'
+  activitiyDefinition: 'AD-000000009'
+  objectStateDefinition: string[]
+  user: 'User000000037'
+  identification: { idNumber: string }
+  address: unknown[]
+  relation: unknown[]
+}
 
 function isRecord(value: unknown): value is SupplierRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -40,5 +58,10 @@ export async function getSupplierFormInfo(): Promise<unknown> {
     },
   })
 
+  return response.data
+}
+
+export async function createSupplier(data: SupplierCreateData): Promise<unknown> {
+  const response = await axios.post(`${API_BASE_URL}organization`, data)
   return response.data
 }

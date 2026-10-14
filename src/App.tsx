@@ -14,7 +14,9 @@ import {
 } from './api/items'
 import ItemsPage, { ItemsGrid } from './pages/ItemsPage'
 import NewSupplierPage from './pages/NewSupplierPage'
-import SuppliersPage from './pages/SuppliersPage'
+import ServicesPage from './pages/ServicesPage'
+import SuppliersPage, { SupplierListPage } from './pages/SuppliersPage'
+import GlobalSearch from './components/GlobalSearch'
 
 function App() {
   const location = useLocation()
@@ -59,6 +61,17 @@ function App() {
 
   return (
     <>
+      <header className="app-header">
+        <div className="app-header-inner">
+          <Link className="app-brand" to="/">Catalog</Link>
+          <nav className="app-navigation" aria-label="Main navigation">
+            <Link to="/items">Items</Link>
+            <Link to="/services">Services</Link>
+            <Link to="/suppliers">Suppliers</Link>
+          </nav>
+          <GlobalSearch />
+        </div>
+      </header>
       <Routes>
       <Route path="/" element={
         <main className="products-page">
@@ -66,12 +79,6 @@ function App() {
             <div>
               <p className="eyebrow">CATALOG</p>
               <h1>Products</h1>
-            </div>
-            <div className="products-actions">
-              <nav className="home-navigation" aria-label="Main navigation">
-                <Link className="home-navigation-link" to="/items">Items</Link>
-                <Link className="home-navigation-link" to="/suppliers">Suppliers</Link>
-              </nav>
             </div>
           </header>
 
@@ -103,8 +110,11 @@ function App() {
           />
         )}
       />
-      <Route path="/suppliers/new" element={<NewSupplierPage />} />
-      <Route path="/suppliers" element={<SuppliersPage />} />
+      <Route path="/services" element={<ServicesPage />} />
+      <Route path="/suppliers" element={<SuppliersPage />}>
+        <Route index element={<SupplierListPage />} />
+        <Route path="new" element={<NewSupplierPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {searchOpen && (
