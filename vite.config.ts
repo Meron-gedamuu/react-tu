@@ -8,7 +8,7 @@ export default defineConfig({
     port:3001,
     proxy: {
       '/api': {
-        target: 'https://test.4loop.tech',
+        target: 'https://test-api.4loop.tech',
         changeOrigin: true,
         secure: true,
       },

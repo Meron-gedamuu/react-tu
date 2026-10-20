@@ -64,7 +64,6 @@ export function getUnitOfMeasurementOptions(payload: unknown): UnitOfMeasurement
 export async function getItems(searchParameters?: ItemSearchParameters): Promise<unknown> {
   const params: Record<string, string | number> = {
     gslType: 1,
-    branch: 'OUD100007979',
   }
 
   for (const [key, value] of Object.entries(searchParameters ?? {})) {

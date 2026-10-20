@@ -46,7 +46,9 @@ function NoItemsOverlay() {
   {
    field:'startTimStamp',
    headerName: 'Start Time Stamp',
-   valueFormatter: ({ value }) => dayjs(value).format('YYYY-MM-DD'),
+   valueFormatter: (value) => {
+    return value ? dayjs(value).format('YYYY-MM-DD') : ''
+   },
    flex:1,
   },
    {
@@ -59,7 +61,7 @@ function NoItemsOverlay() {
 export function ItemsGrid({ items, isLoading, isFetching, error, ariaLabel }: ItemsGridProps) { 
   const rows = items.map((item, index) => ({
     ...item,
-    id: item.id ?? item.ID ?? item.articleId ?? item.articleID ?? index,
+    id: item.id ?? item.ID ?? item.articleId ?? item.articleID ?? item.ArticleCode ?? index,
   }))
 
   return isLoading ? (
@@ -76,8 +78,8 @@ export function ItemsGrid({ items, isLoading, isFetching, error, ariaLabel }: It
         columns={columns}
         loading={isFetching}
         slots={{ noRowsOverlay: NoItemsOverlay }}
-        pageSizeOptions={[10, 25, 50]}
-        initialState={{ pagination: { paginationModel: { pageSize: 25, page: 0 } } }}
+        pageSizeOptions={[25, 50, 100]}
+        initialState={{ pagination: { paginationModel: { pageSize: 100, page: 0 } } }}
         disableRowSelectionOnClick
       />
     </Box>
@@ -91,12 +93,19 @@ function ItemsPage({ items, isLoading, isFetching, error, onOpenProductsSearch }
         <span aria-hidden="true" style={{ fontSize: 20, lineHeight: 1 }}>←</span>
         <span style={{ marginLeft: 8 }}>Back</span>
       </Button>
-      <Button onClick={onOpenProductsSearch} variant="outlined" sx={{ mb: 2, ml: 1 }}>
+      <Button
+        onClick={onOpenProductsSearch}
+        variant="contained"
+        sx={{ mb: 2, ml: 1 }}
+      >
         Search Products
       </Button>
-      <Typography component="h1" variant="h4" sx={{ mb: 3, fontWeight: 800 }}>
-        Registered items
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mb: 3 }}>
+        <Typography component="h1" variant="h4" sx={{ fontWeight: 800 }}>
+          Registered items
+        </Typography>
+        <Typography color="text.secondary">{items.length} records</Typography>
+      </Box>
 
       <ItemsGrid
         items={items}

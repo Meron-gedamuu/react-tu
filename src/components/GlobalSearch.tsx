@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { extractItems, getItems, type ItemRecord } from '../api/items'
-import { extractServices, getServices, type ServiceRecord } from '../api/services'
 import { extractSuppliers, getSuppliers, type SupplierRecord } from '../api/suppliers'
 
 type SearchResult = {
   id: string
-  category: 'Item' | 'Service' | 'Supplier'
+  category: 'Item' | 'Supplier'
   label: string
   detail: string
   to: string
@@ -75,12 +74,6 @@ function GlobalSearch() {
     enabled: isSearchEnabled,
     staleTime: 5 * 60 * 1000,
   })
-  const servicesQuery = useQuery({
-    queryKey: ['services'],
-    queryFn: getServices,
-    enabled: isSearchEnabled,
-    staleTime: 5 * 60 * 1000,
-  })
   const suppliersQuery = useQuery({
     queryKey: ['suppliers'],
     queryFn: getSuppliers,
@@ -100,15 +93,6 @@ function GlobalSearch() {
       ['ArticleCode', 'articleCode', 'Code', 'code'],
       ['id', 'ID', 'articleId', 'articleID', 'ArticleCode'],
     )
-    const services = toSearchResults<ServiceRecord>(
-      extractServices(servicesQuery.data),
-      query,
-      'Service',
-      '/services',
-      ['OrganizationName', 'organizationName', 'ServiceName', 'serviceName', 'Name', 'name'],
-      ['OrganizationCode', 'organizationCode', 'ServiceCode', 'serviceCode', 'Code', 'code'],
-      ['id', 'ID', 'serviceId', 'serviceID', 'OrganizationCode'],
-    )
     const suppliers = toSearchResults<SupplierRecord>(
       extractSuppliers(suppliersQuery.data),
       query,
@@ -119,19 +103,17 @@ function GlobalSearch() {
       ['id', 'ID', 'organizationId', 'organizationID', 'OrganizationCode'],
     )
 
-    return [...items, ...services, ...suppliers]
-  }, [itemsQuery.data, query, servicesQuery.data, suppliersQuery.data])
+    return [...items, ...suppliers]
+  }, [itemsQuery.data, query, suppliersQuery.data])
 
   const isDebouncing = value.trim().toLocaleLowerCase() !== query
   const isLoading = Boolean(value.trim()) && (
     isDebouncing ||
     itemsQuery.isLoading ||
-    servicesQuery.isLoading ||
     suppliersQuery.isLoading
   )
   const errors = [
     itemsQuery.error && 'items',
-    servicesQuery.error && 'services',
     suppliersQuery.error && 'suppliers',
   ].filter((category): category is string => Boolean(category))
   const showResults = isFocused && Boolean(value.trim())
@@ -144,7 +126,7 @@ function GlobalSearch() {
       }}
     >
       <label className="visually-hidden" htmlFor="global-search-input">
-        Search items, services, and suppliers
+        Search items and suppliers
       </label>
       <div className="global-search-control">
         <span className="global-search-icon" aria-hidden="true">⌕</span>
@@ -152,7 +134,7 @@ function GlobalSearch() {
           id="global-search-input"
           type="search"
           value={value}
-          placeholder="Search items, services, suppliers..."
+          placeholder="Search items and suppliers..."
           autoComplete="off"
           aria-controls="global-search-results"
           aria-expanded={showResults}

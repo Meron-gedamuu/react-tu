@@ -1,16 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
+import { useQuery } from '@tanstack/react-query'
+import { Alert, Box, Button, CircularProgress, IconButton, Typography } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { Link, Outlet } from 'react-router-dom'
-import { createSupplier, extractSuppliers, getSuppliers, type SupplierCreateData } from '../api/suppliers'
-
-export type SupplierFormMutationContext = {
-  mutate: (data: SupplierCreateData, onSuccess?: () => void) => void
-  isPending: boolean
-  error: Error | null
-  isSuccess: boolean
-  reset: () => void
-}
+import { extractSuppliers, getSuppliers, type SupplierRecord } from '../api/suppliers'
 
 function getColumnType(values: unknown[]): GridColDef['type'] {
   const definedValues = values.filter((value) => value !== null && value !== undefined)
@@ -33,13 +25,42 @@ function displayValue(value: unknown): string | number | boolean | null {
   return JSON.stringify(value)
 }
 
+function readText(record: SupplierRecord, keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' || typeof value === 'number') {
+      return String(value).trim()
+    }
+  }
+
+  return ''
+}
+
 function SupplierListPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['suppliers'],
     queryFn: getSuppliers,
   })
   const suppliers = extractSuppliers(data)
-  const fields = [...new Set(suppliers.flatMap((supplier) => Object.keys(supplier)))]
+  const mappedFields = [
+    { field: 'TradeName', headerName: 'Trade Name', keys: ['tradeName', 'TradeName'] },
+    { field: 'BrandName', headerName: 'Brand Name', keys: ['brandName', 'brandmes', 'BrandName'] },
+    { field: 'Tax', headerName: 'Tax', keys: ['taxType'] },
+    { field: 'Remark', headerName: 'Remark', keys: ['remark', 'Remark'] },
+  ]
+  const mappedSourceKeys = new Set(mappedFields.flatMap(({ keys }) => keys))
+  const fields = [...new Set(
+    suppliers.flatMap((supplier) =>
+      Object.keys(supplier).filter((field) => !mappedSourceKeys.has(field)),
+    ),
+  )]
+  const mappedColumns: GridColDef[] = mappedFields.map(({ field, headerName }) => ({
+    field,
+    headerName,
+    minWidth: 160,
+    flex: 1,
+    sortable: true,
+  }))
   const columns: GridColDef[] = fields.map((field) => {
     const values = suppliers.map((supplier) => supplier[field])
     return {
@@ -54,10 +75,49 @@ function SupplierListPage() {
   })
   const rows = suppliers.map((supplier, index) => ({
     ...supplier,
-    
+    TradeName: readText(supplier, ['tradeName', 'TradeName']) || null,
+    BrandName: readText(supplier, ['brandName', 'brandmes', 'BrandName']) || null,
+    Tax: readText(supplier, ['taxType']) || null,
+    Remark: readText(supplier, ['remark', 'Remark']) || null,
     id: supplier.id ?? supplier.OrganizationCode ?? supplier.organizationCode ?? index,
-
   }))
+  mappedColumns.unshift({
+    field: 'edit',
+    headerName: 'Actions',
+    sortable: false,
+    filterable: false,
+    minWidth: 110,
+    renderCell: ({ row }) => {
+      const code = row.OrganizationCode
+      if (typeof code !== 'string' && typeof code !== 'number') return null
+
+      return (
+        <IconButton
+          component={Link}
+          to={`/suppliers/edit/${encodeURIComponent(String(code))}`}
+          size="small"
+          aria-label={`Edit supplier ${String(code)}`}
+          title="Edit supplier"
+        >
+          <svg
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+          </svg>
+        </IconButton>
+      )
+    },
+  })
+  mappedColumns.push(...columns)
 
   return (
     <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
@@ -66,11 +126,18 @@ function SupplierListPage() {
         <span style={{ marginLeft: 8 }}>Back</span>
       </Button>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 3 }}>
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-          Suppliers
-        </Typography>
-        <Button component={Link} to="/suppliers/new" variant="contained">
-          New Supplier
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
+          <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+            Suppliers
+          </Typography>
+          <Typography color="text.secondary">{suppliers.length} records</Typography>
+        </Box>
+        <Button
+          component={Link}
+          to="/suppliers/new"
+          variant="contained"
+        >
+          Create Supplier
         </Button>
       </Box>
 
@@ -87,10 +154,10 @@ function SupplierListPage() {
           <DataGrid
             aria-label="Suppliers"
             rows={rows}
-            columns={columns}
-            pageSizeOptions={[10, 25, 50]}
+            columns={mappedColumns}
+            pageSizeOptions={[25, 50, 100]}
             initialState={{
-              pagination: { paginationModel: { pageSize: 25, page: 0 } },
+              pagination: { paginationModel: { pageSize: 100, page: 0 } },
               
               sorting: { sortModel: [{ field: 'OrganizationCode', sort: 'asc' }] },
 
@@ -104,27 +171,7 @@ function SupplierListPage() {
 }
 
 function SuppliersPage() {
-  const queryClient = useQueryClient()
-  const mutation = useMutation({
-    mutationFn: createSupplier,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['suppliers'] })
-    },
-  })
-
-  function mutateSupplier(data: SupplierCreateData, onSuccess?: () => void) {
-    mutation.mutate(data, { onSuccess })
-  }
-
-  const context: SupplierFormMutationContext = {
-    mutate: mutateSupplier,
-    isPending: mutation.isPending,
-    error: mutation.error,
-    isSuccess: mutation.isSuccess,
-    reset: mutation.reset,
-  }
-
-  return <Outlet context={context} />
+  return <Outlet />
 }
 
 export { SupplierListPage }
