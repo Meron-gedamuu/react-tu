@@ -72,7 +72,7 @@ export function extractSuppliers(payload: unknown): SupplierRecord[] {
 export async function getCustomers(): Promise<unknown> {
   const response = await axios.get(`${API_BASE_URL}organization/header`, {
     params: {
-      GslType: 7,
+      GslType: 6,
     },
   })
 
@@ -87,7 +87,13 @@ export async function getCustomers(): Promise<unknown> {
 }
 
 export async function getSuppliers(): Promise<unknown> {
-  return getCustomers()
+  const response = await axios.get(`${API_BASE_URL}organization/header`, {
+    params: {
+      GslType: 7,
+    },
+  })
+
+  return response.data
 }
 
 export async function getSupplierFormInfo(): Promise<unknown> {

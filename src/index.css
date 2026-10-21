@@ -114,6 +114,29 @@ select {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+.sidebar-group-toggle {
+  width: 100%;
+  grid-template-columns: 40px minmax(0, 1fr) 18px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar-group-chevron {
+  justify-self: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sidebar-subnavigation {
+  display: grid;
+  gap: 2px;
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(208, 223, 215, 0.28);
+}
+
 .sidebar-link svg {
   justify-self: center;
 }
@@ -149,6 +172,16 @@ select {
   grid-template-columns: 40px;
   justify-content: center;
   padding-inline: 0;
+}
+
+.sidebar-collapsed .sidebar-group-chevron {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-subnavigation {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
 }
 
 .sidebar-collapsed .sidebar-link-label {

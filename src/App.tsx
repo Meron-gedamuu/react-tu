@@ -13,19 +13,24 @@ import {
   type ItemSearchParameters,
 } from './api/items'
 import ItemsPage, { ItemsGrid } from './pages/ItemsPage'
+import CustomersPage from './pages/CustomersPage'
+import EmployeesPage from './pages/EmployeesPage'
 import SupplierFormPage from './pages/SupplierFormPage'
 import ProformaPage from './pages/ProformaPage'
 import SuppliersPage, { SupplierListPage } from './pages/SuppliersPage'
 import GlobalSearch from './components/GlobalSearch'
 import { createSupplier, updateSupplier } from './api/suppliers'
 
-const navigationItems = [
-  { label: 'Items', to: '/items', icon: 'items' },
-  { label: 'Suppliers', to: '/suppliers', icon: 'suppliers' },
-  { label: 'Proforma', to: '/proforma', icon: 'proforma' },
-] as const
+type NavigationIconName =
+  | 'items'
+  | 'customers'
+  | 'suppliers'
+  | 'employees'
+  | 'proforma'
+  | 'warehouse'
+  | 'consignees'
 
-function NavigationIcon({ name }: { name: (typeof navigationItems)[number]['icon'] }) {
+function NavigationIcon({ name }: { name: NavigationIconName }) {
   const commonProps = {
     'aria-hidden': true as const,
     fill: 'none',
@@ -57,6 +62,40 @@ function NavigationIcon({ name }: { name: (typeof navigationItems)[number]['icon
       </svg>
     )
   }
+  if (name === 'customers') {
+    return (
+      <svg {...commonProps}>
+        <circle cx="12" cy="8" r="3.25" />
+        <path d="M5 20v-1.5a7 7 0 0 1 14 0V20z" />
+      </svg>
+    )
+  }
+  if (name === 'employees') {
+    return (
+      <svg {...commonProps}>
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <circle cx="12" cy="10" r="2.25" />
+        <path d="M8.5 17a3.5 3.5 0 0 1 7 0" />
+      </svg>
+    )
+  }
+  if (name === 'warehouse') {
+    return (
+      <svg {...commonProps}>
+        <path d="m3 9 9-5 9 5v11H3z" />
+        <path d="M8 20v-6h8v6M3 9h18M7 10v2m5-2v2m5-2v2" />
+      </svg>
+    )
+  }
+  if (name === 'consignees') {
+    return (
+      <svg {...commonProps}>
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="9" r="2.25" />
+        <path d="M3 20v-1.5a6 6 0 0 1 12 0V20zM15 14a4.5 4.5 0 0 1 6 4.2V20h-3" />
+      </svg>
+    )
+  }
   return (
     <svg {...commonProps}>
       <path d="M6 3.5h8l4 4V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" />
@@ -70,6 +109,12 @@ function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(
     () => !window.matchMedia('(max-width: 760px)').matches,
   )
+  const [expandedNavigationGroups, setExpandedNavigationGroups] = useState(() => ({
+    warehouse: location.pathname === '/items',
+    consignees: ['/suppliers', '/customers', '/employees'].some((path) =>
+      location.pathname.startsWith(path),
+    ),
+  }))
   const [appliedFilters, setAppliedFilters] = useState<ItemSearchParameters>({})
   const [searchRevision, setSearchRevision] = useState(0)
   const {
@@ -109,6 +154,19 @@ function App() {
     setSearchOpen(false)
   }
 
+  function toggleNavigationGroup(group: 'warehouse' | 'consignees') {
+    setExpandedNavigationGroups((current) => ({
+      ...current,
+      [group]: !current[group],
+    }))
+  }
+
+  function closeSidebarOnMobile() {
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      setIsSidebarExpanded(false)
+    }
+  }
+
   return (
     <>
       <div className={`app-shell${isSidebarExpanded ? ' sidebar-expanded' : ' sidebar-collapsed'}`}>
@@ -126,22 +184,91 @@ function App() {
             </button>
           </div>
           <nav className="sidebar-navigation">
-            {navigationItems.map((item) => (
-              <NavLink
-                key={item.to}
-                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
-                to={item.to}
-                title={!isSidebarExpanded ? item.label : undefined}
-                onClick={() => {
-                  if (window.matchMedia('(max-width: 760px)').matches) {
-                    setIsSidebarExpanded(false)
-                  }
-                }}
+            <div className="sidebar-navigation-group">
+              <button
+                className="sidebar-link sidebar-group-toggle"
+                type="button"
+                aria-expanded={expandedNavigationGroups.warehouse}
+                aria-controls="warehouse-navigation-links"
+                title={!isSidebarExpanded ? 'Warehouse' : undefined}
+                onClick={() => toggleNavigationGroup('warehouse')}
               >
-                <NavigationIcon name={item.icon} />
-                <span className="sidebar-link-label">{item.label}</span>
-              </NavLink>
-            ))}
+                <NavigationIcon name="warehouse" />
+                <span className="sidebar-link-label">Warehouse</span>
+                <span className="sidebar-group-chevron" aria-hidden="true">
+                  {expandedNavigationGroups.warehouse ? '⌄' : '›'}
+                </span>
+              </button>
+              {expandedNavigationGroups.warehouse && (
+                <div className="sidebar-subnavigation" id="warehouse-navigation-links">
+                  <NavLink
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    to="/items"
+                    title={!isSidebarExpanded ? 'Items' : undefined}
+                    onClick={closeSidebarOnMobile}
+                  >
+                    <NavigationIcon name="items" />
+                    <span className="sidebar-link-label">Items</span>
+                  </NavLink>
+                </div>
+              )}
+            </div>
+            <div className="sidebar-navigation-group">
+              <button
+                className="sidebar-link sidebar-group-toggle"
+                type="button"
+                aria-expanded={expandedNavigationGroups.consignees}
+                aria-controls="consignees-navigation-links"
+                title={!isSidebarExpanded ? 'Consignees' : undefined}
+                onClick={() => toggleNavigationGroup('consignees')}
+              >
+                <NavigationIcon name="consignees" />
+                <span className="sidebar-link-label">Consignees</span>
+                <span className="sidebar-group-chevron" aria-hidden="true">
+                  {expandedNavigationGroups.consignees ? '⌄' : '›'}
+                </span>
+              </button>
+              {expandedNavigationGroups.consignees && (
+                <div className="sidebar-subnavigation" id="consignees-navigation-links">
+                  <NavLink
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    to="/suppliers"
+                    title={!isSidebarExpanded ? 'Suppliers' : undefined}
+                    onClick={closeSidebarOnMobile}
+                  >
+                    <NavigationIcon name="suppliers" />
+                    <span className="sidebar-link-label">Suppliers</span>
+                  </NavLink>
+                  <NavLink
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    to="/customers"
+                    title={!isSidebarExpanded ? 'Customers' : undefined}
+                    onClick={closeSidebarOnMobile}
+                  >
+                    <NavigationIcon name="customers" />
+                    <span className="sidebar-link-label">Customers</span>
+                  </NavLink>
+                  <NavLink
+                    className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                    to="/employees"
+                    title={!isSidebarExpanded ? 'Employees' : undefined}
+                    onClick={closeSidebarOnMobile}
+                  >
+                    <NavigationIcon name="employees" />
+                    <span className="sidebar-link-label">Employees</span>
+                  </NavLink>
+                </div>
+              )}
+            </div>
+            <NavLink
+              className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+              to="/proforma"
+              title={!isSidebarExpanded ? 'Proforma' : undefined}
+              onClick={closeSidebarOnMobile}
+            >
+              <NavigationIcon name="proforma" />
+              <span className="sidebar-link-label">Proforma</span>
+            </NavLink>
           </nav>
         </aside>
         {isSidebarExpanded && (
@@ -196,6 +323,8 @@ function App() {
               )}
             />
             <Route path="/proforma" element={<ProformaPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/suppliers" element={<SuppliersPage />}>
               <Route index element={<SupplierListPage />} />
               <Route path="new" element={<SupplierFormPage createSupplier={createSupplier} />} />
