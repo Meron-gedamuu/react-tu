@@ -521,6 +521,30 @@ select {
   box-shadow: 0 10px 26px rgba(22, 39, 31, 0.14);
 }
 
+.global-search-group + .global-search-group {
+  border-top: 1px solid #dce3df;
+}
+
+.global-search-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 8px 12px;
+  background: #f4f7f5;
+  color: #52635c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.global-search-group-heading span {
+  color: #7b8982;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
 .global-search-result {
   display: flex;
   min-height: 58px;
@@ -532,7 +556,7 @@ select {
   text-decoration: none;
 }
 
-.global-search-result + .global-search-result {
+.global-search-group .global-search-result + .global-search-result {
   border-top: 1px solid #edf1ee;
 }
 

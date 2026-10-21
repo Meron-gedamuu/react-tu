@@ -13,18 +13,13 @@ function isRecord(value: unknown): value is EmployeeRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isEmployeeRecord(value: unknown): value is EmployeeRecord {
-  return isRecord(value)
-    && (typeof value.personcode === 'string' || typeof value.personcode === 'number')
-}
-
 export function extractEmployees(payload: unknown): EmployeeRecord[] {
-  if (Array.isArray(payload)) return payload.filter(isEmployeeRecord)
+  if (Array.isArray(payload)) return payload.filter(isRecord)
   if (!isRecord(payload)) return []
 
   for (const key of ['data', 'items', 'employees', 'results', 'result']) {
     const nested = payload[key]
-    if (Array.isArray(nested)) return nested.filter(isEmployeeRecord)
+    if (Array.isArray(nested)) return nested.filter(isRecord)
     if (isRecord(nested)) {
       const employees = extractEmployees(nested)
       if (employees.length > 0) return employees
